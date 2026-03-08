@@ -6,7 +6,8 @@ import random
 from controls import move_player, move_player_with_joystick
 from classes.constants import WIDTH, HEIGHT, FPS, SHOOT_DELAY
 from functions import show_game_over, music_background
-from menu import show_menu
+from menu import show_menu, get_background_mode
+from classes.dynamic_background import DynamicBackground
 
 from classes.player import Player
 from classes.bullets import Bullet
@@ -67,6 +68,10 @@ background_top = background_img.copy()
 current_image = background_img
 new_background_activated = False
 
+# Dynamic background system
+dynamic_bg = DynamicBackground()
+use_dynamic_background = False
+
 explosion_images = [pygame.image.load(f"images/explosion/explosion{i}.png") for i in range(8)]
 explosion2_images = [pygame.image.load(f"images/explosion2/explosion{i}.png") for i in range(18)]
 explosion3_images = [pygame.image.load(f"images/explosion3/explosion{i}.png") for i in range(18)]
@@ -122,9 +127,9 @@ if pygame.joystick.get_count() > 0:
     joystick = pygame.joystick.Joystick(0)
     joystick.init()
 
-if show_menu:
-    import menu
-    menu.main()
+# Menu already shown during import of show_menu from menu module
+# Get background mode from menu selection
+use_dynamic_background = get_background_mode() == "dynamic"
 
 is_shooting = False
 last_shot_time = 0
@@ -210,40 +215,41 @@ while running:
     if not paused:
         move_player(keys, player)
 
+    # Render background based on selected mode
+    if use_dynamic_background:
+        dynamic_bg.update(score)
+        dynamic_bg.draw(screen)
+    else:
+        # Classic scrolling background
         screen.blit(current_image, (0, bg_y_shift))
         background_top_rect = background_top.get_rect(topleft=(0, bg_y_shift))
         background_top_rect.top = bg_y_shift + HEIGHT
         screen.blit(background_top, background_top_rect)
 
-    bg_y_shift += 1
-    if bg_y_shift >= 0:
-        bg_y_shift = -HEIGHT
+        bg_y_shift += 1
+        if bg_y_shift >= 0:
+            bg_y_shift = -HEIGHT
 
-    if score > 3000:
-        bg_y_shift += 2
+        if score > 3000:
+            bg_y_shift += 2
 
-    if score >= 3000 and not new_background_activated:
-        current_image = background_img2
-        background_top = background_img2.copy()
-        new_background_activated = True
+        if score >= 3000 and not new_background_activated:
+            current_image = background_img2
+            background_top = background_img2.copy()
+            new_background_activated = True
 
-    if score >= 10000 and new_background_activated:
-        current_image = background_img3
-        background_top = background_img3.copy()
+        if score >= 10000 and new_background_activated:
+            current_image = background_img3
+            background_top = background_img3.copy()
 
-    if score >= 15000 and new_background_activated:
-        current_image = background_img4
-        background_top = background_img4.copy()
+        if score >= 15000 and new_background_activated:
+            current_image = background_img4
+            background_top = background_img4.copy()
 
-    if score == 0:
-        current_image = background_img
-        background_top = background_img.copy()
-        new_background_activated = False
-
-    screen.blit(current_image, (0, bg_y_shift))
-    background_top_rect = background_top.get_rect(topleft=(0, bg_y_shift))
-    background_top_rect.top = bg_y_shift + HEIGHT
-    screen.blit(background_top, background_top_rect)
+        if score == 0:
+            current_image = background_img
+            background_top = background_img.copy()
+            new_background_activated = False
 
     if score > hi_score:
         hi_score = score
