@@ -6,6 +6,9 @@ import pygame.mixer
 
 from classes.constants import WIDTH, HEIGHT, BLACK, WHITE, RED
 
+# Global setting for background mode
+background_mode = "dynamic"  # "classic" or "dynamic"
+
 
 def animate_screen():
     for i in range(0, 20):
@@ -15,6 +18,10 @@ def animate_screen():
         screen.blit(mainmenu_img, (random.randint(-5, 5), random.randint(-5, 5)))
         pygame.display.flip()
         pygame.time.wait(10)
+
+
+def get_background_mode():
+    return background_mode
 
 
 pygame.mixer.init()
@@ -38,8 +45,10 @@ logo_img = pygame.image.load('images/ch.png').convert_alpha()
 logo_x = (WIDTH - logo_img.get_width()) // 2
 logo_y = 50
 
-play_button_rect = pygame.Rect(WIDTH // 2 - 100, HEIGHT // 2 - 25, 205, 50)
-quit_button_rect = pygame.Rect(WIDTH // 2 - 100, HEIGHT // 2 + 50, 205, 50)
+# Menu buttons
+play_button_rect = pygame.Rect(WIDTH // 2 - 100, HEIGHT // 2 - 50, 205, 50)
+bg_button_rect = pygame.Rect(WIDTH // 2 - 100, HEIGHT // 2 + 20, 205, 50)
+quit_button_rect = pygame.Rect(WIDTH // 2 - 100, HEIGHT // 2 + 90, 205, 50)
 
 pygame.mixer.music.load('game_sounds/menu.mp3')
 pygame.mixer.music.play(-1)
@@ -54,83 +63,116 @@ if pygame.joystick.get_count() > 0:
     joystick.init()
 
 
-while show_menu:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            pygame.quit()
-            sys.exit()
+def main():
+    global show_menu, selected_button, background_mode
+    show_menu = True
+    selected_button = 0
 
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            x, y = event.pos
-            if play_button_rect.collidepoint(x, y):
-                explosion_sound.play()
-                animate_screen()
-                show_menu = False
-                import main
-                main.main()
-                break
-            elif quit_button_rect.collidepoint(x, y):
+    while show_menu:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
 
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_UP:
-                selected_button = 0
-            elif event.key == pygame.K_DOWN:
-                selected_button = 1
-            elif event.key == pygame.K_RETURN:
-                if selected_button == 0:
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                x, y = event.pos
+                if play_button_rect.collidepoint(x, y):
                     explosion_sound.play()
                     animate_screen()
                     show_menu = False
-                    screen.fill(BLACK)
-                    import main
-                    main.main()
                     break
-                elif selected_button == 1:
+                elif bg_button_rect.collidepoint(x, y):
+                    # Toggle background mode
+                    background_mode = "classic" if background_mode == "dynamic" else "dynamic"
+                elif quit_button_rect.collidepoint(x, y):
                     pygame.quit()
                     sys.exit()
 
-        if joystick:
-            if event.type == pygame.JOYBUTTONDOWN:
-                if event.button == 0:
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP:
+                    selected_button = (selected_button - 1) % 3
+                elif event.key == pygame.K_DOWN:
+                    selected_button = (selected_button + 1) % 3
+                elif event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
+                    if selected_button == 1:
+                        background_mode = "classic" if background_mode == "dynamic" else "dynamic"
+                elif event.key == pygame.K_RETURN:
                     if selected_button == 0:
                         explosion_sound.play()
                         animate_screen()
                         show_menu = False
                         screen.fill(BLACK)
-                        import main
-                        main.main()
                         break
                     elif selected_button == 1:
+                        background_mode = "classic" if background_mode == "dynamic" else "dynamic"
+                    elif selected_button == 2:
                         pygame.quit()
                         sys.exit()
-            elif event.type == pygame.JOYHATMOTION:
-                if event.value[1] == 1:
-                    selected_button = 0
-                elif event.value[1] == -1:
-                    selected_button = 1
 
-    screen.blit(mainmenu_img, (0, 0))
+            if joystick:
+                if event.type == pygame.JOYBUTTONDOWN:
+                    if event.button == 0:
+                        if selected_button == 0:
+                            explosion_sound.play()
+                            animate_screen()
+                            show_menu = False
+                            screen.fill(BLACK)
+                            break
+                        elif selected_button == 1:
+                            background_mode = "classic" if background_mode == "dynamic" else "dynamic"
+                        elif selected_button == 2:
+                            pygame.quit()
+                            sys.exit()
+                elif event.type == pygame.JOYHATMOTION:
+                    if event.value[1] == 1:
+                        selected_button = (selected_button - 1) % 3
+                    elif event.value[1] == -1:
+                        selected_button = (selected_button + 1) % 3
+                    elif event.value[0] != 0 and selected_button == 1:
+                        background_mode = "classic" if background_mode == "dynamic" else "dynamic"
 
-    screen.blit(logo_img, (logo_x, logo_y))
+        screen.blit(mainmenu_img, (0, 0))
+        screen.blit(logo_img, (logo_x, logo_y))
 
-    font = pygame.font.SysFont('Comic Sans MS', 40)
-    text = font.render("Play", True, WHITE)
-    pygame.draw.rect(screen, BLACK, play_button_rect, border_radius=10)
-    if selected_button == 0:
-        pygame.draw.rect(screen, RED, play_button_rect, border_radius=10, width=4)
-    text_rect = text.get_rect()
-    text_rect.center = play_button_rect.center
-    screen.blit(text, text_rect)
-    text = font.render("Exit", True, WHITE)
-    pygame.draw.rect(screen, BLACK, quit_button_rect, border_radius=10)
-    if selected_button == 1:
-        pygame.draw.rect(screen, RED, quit_button_rect, border_radius=10, width=4)
-    text_rect = text.get_rect()
-    text_rect.center = quit_button_rect.center
-    screen.blit(text, text_rect)
-    pygame.display.flip()
-    clock.tick(60)
+        font = pygame.font.SysFont('Comic Sans MS', 40)
+        font_small = pygame.font.SysFont('Comic Sans MS', 28)
 
-pygame.quit()
+        # Play button
+        text = font.render("Play", True, WHITE)
+        pygame.draw.rect(screen, BLACK, play_button_rect, border_radius=10)
+        if selected_button == 0:
+            pygame.draw.rect(screen, RED, play_button_rect, border_radius=10, width=4)
+        text_rect = text.get_rect(center=play_button_rect.center)
+        screen.blit(text, text_rect)
+
+        # Background mode button
+        bg_text = f"BG: {background_mode.upper()}"
+        text = font_small.render(bg_text, True, WHITE)
+        pygame.draw.rect(screen, BLACK, bg_button_rect, border_radius=10)
+        if selected_button == 1:
+            pygame.draw.rect(screen, RED, bg_button_rect, border_radius=10, width=4)
+        text_rect = text.get_rect(center=bg_button_rect.center)
+        screen.blit(text, text_rect)
+
+        # Arrows for background toggle
+        arrow_color = (200, 200, 200) if selected_button == 1 else (100, 100, 100)
+        arrow_font = pygame.font.SysFont('Arial', 24)
+        left_arrow = arrow_font.render("<", True, arrow_color)
+        right_arrow = arrow_font.render(">", True, arrow_color)
+        screen.blit(left_arrow, (bg_button_rect.left + 10, bg_button_rect.centery - 10))
+        screen.blit(right_arrow, (bg_button_rect.right - 25, bg_button_rect.centery - 10))
+
+        # Exit button
+        text = font.render("Exit", True, WHITE)
+        pygame.draw.rect(screen, BLACK, quit_button_rect, border_radius=10)
+        if selected_button == 2:
+            pygame.draw.rect(screen, RED, quit_button_rect, border_radius=10, width=4)
+        text_rect = text.get_rect(center=quit_button_rect.center)
+        screen.blit(text, text_rect)
+
+        pygame.display.flip()
+        clock.tick(60)
+
+
+if __name__ == "__main__":
+    main()

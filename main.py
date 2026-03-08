@@ -6,7 +6,7 @@ import random
 from controls import move_player, move_player_with_joystick
 from classes.constants import WIDTH, HEIGHT, FPS, SHOOT_DELAY
 from functions import show_game_over, music_background
-from menu import show_menu
+import menu
 
 from classes.player import Player
 from classes.bullets import Bullet
@@ -15,6 +15,7 @@ from classes.meteors import Meteors, Meteors2, BlackHole
 from classes.explosions import Explosion, Explosion2
 from classes.enemies import Enemy1, Enemy2
 from classes.bosses import Boss1, Boss2, Boss3
+from classes.dynamic_background import DynamicBackground
 
 
 pygame.init()
@@ -66,6 +67,10 @@ background_img4 = pygame.image.load('images/bg/background4.png').convert()
 background_top = background_img.copy()
 current_image = background_img
 new_background_activated = False
+
+# Dynamic background (initialized after menu selection)
+dynamic_bg = None
+use_dynamic_bg = False
 
 explosion_images = [pygame.image.load(f"images/explosion/explosion{i}.png") for i in range(8)]
 explosion2_images = [pygame.image.load(f"images/explosion2/explosion{i}.png") for i in range(18)]
@@ -122,9 +127,11 @@ if pygame.joystick.get_count() > 0:
     joystick = pygame.joystick.Joystick(0)
     joystick.init()
 
-if show_menu:
-    import menu
-    menu.main()
+# Show menu and get background preference
+menu.main()
+use_dynamic_bg = menu.get_background_mode() == "dynamic"
+if use_dynamic_bg:
+    dynamic_bg = DynamicBackground()
 
 is_shooting = False
 last_shot_time = 0
@@ -210,40 +217,48 @@ while running:
     if not paused:
         move_player(keys, player)
 
+        if use_dynamic_bg and dynamic_bg:
+            # Dynamic background mode
+            dynamic_bg.update(score)
+            dynamic_bg.draw(screen)
+        else:
+            # Classic background mode
+            screen.blit(current_image, (0, bg_y_shift))
+            background_top_rect = background_top.get_rect(topleft=(0, bg_y_shift))
+            background_top_rect.top = bg_y_shift + HEIGHT
+            screen.blit(background_top, background_top_rect)
+
+    # Classic background scrolling (only when not using dynamic)
+    if not use_dynamic_bg:
+        bg_y_shift += 1
+        if bg_y_shift >= 0:
+            bg_y_shift = -HEIGHT
+
+        if score > 3000:
+            bg_y_shift += 2
+
+        if score >= 3000 and not new_background_activated:
+            current_image = background_img2
+            background_top = background_img2.copy()
+            new_background_activated = True
+
+        if score >= 10000 and new_background_activated:
+            current_image = background_img3
+            background_top = background_img3.copy()
+
+        if score >= 15000 and new_background_activated:
+            current_image = background_img4
+            background_top = background_img4.copy()
+
+        if score == 0:
+            current_image = background_img
+            background_top = background_img.copy()
+            new_background_activated = False
+
         screen.blit(current_image, (0, bg_y_shift))
         background_top_rect = background_top.get_rect(topleft=(0, bg_y_shift))
         background_top_rect.top = bg_y_shift + HEIGHT
         screen.blit(background_top, background_top_rect)
-
-    bg_y_shift += 1
-    if bg_y_shift >= 0:
-        bg_y_shift = -HEIGHT
-
-    if score > 3000:
-        bg_y_shift += 2
-
-    if score >= 3000 and not new_background_activated:
-        current_image = background_img2
-        background_top = background_img2.copy()
-        new_background_activated = True
-
-    if score >= 10000 and new_background_activated:
-        current_image = background_img3
-        background_top = background_img3.copy()
-
-    if score >= 15000 and new_background_activated:
-        current_image = background_img4
-        background_top = background_img4.copy()
-
-    if score == 0:
-        current_image = background_img
-        background_top = background_img.copy()
-        new_background_activated = False
-
-    screen.blit(current_image, (0, bg_y_shift))
-    background_top_rect = background_top.get_rect(topleft=(0, bg_y_shift))
-    background_top_rect.top = bg_y_shift + HEIGHT
-    screen.blit(background_top, background_top_rect)
 
     if score > hi_score:
         hi_score = score
